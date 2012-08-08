@@ -17,8 +17,11 @@
 
 #include "stdafx.h"
 
+#include "timer.h"
 #include "compression.h"
 #include "win-compression.h"
+
+#include <time.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -26,8 +29,8 @@
 #define ARRAYSIZE(a) sizeof(a)/sizeof(a[0])
 #endif
 
-#define COMPRESSION_REPEAT		for (i = 0; i < 10; ++i)
-#define DECOMPRESSION_REPEAT	//for (i = 0; i < 100; ++i)
+#define COMPRESSION_REPEAT		for (i = 0; i < 100; ++i)
+#define DECOMPRESSION_REPEAT	for (i = 0; i < 1000; ++i)
 
 static bool write_all(const wchar_t* file, bytes a, size_t len)
 {
@@ -139,12 +142,12 @@ static void* alloc_rtl_workspace(USHORT format)
 static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* rtl_out, const wchar_t* out, void* ws)
 {
 	NTSTATUS status = 0;
-	clock_t start, end;
 	ULONG uncomp_len, comp_len, comp2_len = 0;
 	bytes uncomp = (bytes)malloc(len*4);
 	bytes comp = (bytes)malloc(len*4);
 	bytes comp2 = (bytes)malloc(len*4);
 	uint_fast16_t i;
+	double time;
 	
 	CompressionFormat format2 = (CompressionFormat)format;
 	/*switch (format)
@@ -154,80 +157,80 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	case COMPRESSION_FORMAT_XPRESS_HUFF:format2 = COMPRESSION_XPRESS_HUFF; break;
 	}*/
 	
-	start = clock();
+	timer_reset();
 	comp_len = 0;
 	COMPRESSION_REPEAT
 	status = RtlCompressBuffer(format | COMPRESSION_ENGINE_STANDARD, orig, len, comp, len*4, 4096, &comp_len, ws);
-	end = clock();
-	wprintf(L"rtl-compress-std: %Iu bytes\tin %u ms [%lX]\n", comp_len, end - start, status);
+	time = timer_get();
+	wprintf(L"rtl-compress-std: %Iu bytes\tin %f sec [%lX]\n", comp_len, time, status);
 	write_all(rtl_out, comp, comp_len);
 
-	start = clock();
+	timer_reset();
 	uncomp_len = 0;
 	DECOMPRESSION_REPEAT
 	status = RtlDecompressBufferEx(format, uncomp, len*4, comp, comp_len, &uncomp_len, ws);
-	end = clock();
+	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
-	wprintf(L"rtl-decompress:   %Iu bytes\tin %u ms [%lX]\n", uncomp_len, end - start, status);
+	wprintf(L"rtl-decompress:   %Iu bytes\tin %f sec [%lX]\n", uncomp_len, time, status);
 	
 	memset(uncomp, 0xFF, len*4);
-	start = clock();
+	timer_reset();
 	DECOMPRESSION_REPEAT
 	uncomp_len = decompress(format2, comp, comp_len, uncomp, len*4);
-	end = clock();
+	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
-	wprintf(L"decompress:       %Iu bytes\tin %u ms\n", uncomp_len, end - start);
+	wprintf(L"decompress:       %Iu bytes\tin %f sec\n", uncomp_len, time);
 
 	wprintf(L"----------------------------------------------------------------\n");
 	
-	start = clock();
+	timer_reset();
 	comp_len = 0;
 	COMPRESSION_REPEAT
 	status = RtlCompressBuffer(format | COMPRESSION_ENGINE_MAXIMUM, orig, len, comp, len*4, 4096, &comp_len, ws);
-	end = clock();
-	wprintf(L"rtl-compress-max: %Iu bytes\tin %u ms [%lX]\n", comp_len, end - start, status);
+	time = timer_get();
+	wprintf(L"rtl-compress-max: %Iu bytes\tin %f sec [%lX]\n", comp_len, time, status);
 	write_all(rtl_out, comp, comp_len);
 
-	start = clock();
+	timer_reset();
 	uncomp_len = 0;
 	DECOMPRESSION_REPEAT
 	status = RtlDecompressBufferEx(format, uncomp, len*4, comp, comp_len, &uncomp_len, ws);
-	end = clock();
+	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
-	wprintf(L"rtl-decompress:   %Iu bytes\tin %u ms [%lX]\n", uncomp_len, end - start, status);
+	wprintf(L"rtl-decompress:   %Iu bytes\tin %f sec [%lX]\n", uncomp_len, time, status);
 	
 	memset(uncomp, 0xFF, len*4);
-	start = clock();
+	timer_reset();
 	DECOMPRESSION_REPEAT
 	uncomp_len = decompress(format2, comp, comp_len, uncomp, len*4);
-	end = clock();
+	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
-	wprintf(L"decompress:       %Iu bytes\tin %u ms\n", uncomp_len, end - start);
+	wprintf(L"decompress:       %Iu bytes\tin %f sec\n", uncomp_len, time);
 
 	wprintf(L"----------------------------------------------------------------\n");
 
-	start = clock();
+	timer_reset();
 	COMPRESSION_REPEAT
 	comp2_len = compress(format2, orig, len, comp2, len*4);
-	end = clock();
+	time = timer_get();
 	check_equality(comp, comp2, MIN(comp_len, comp2_len));
-	wprintf(L"compress:         %Iu bytes\tin %u ms (%Iu bytes %s)\n", comp2_len, end - start, (comp2_len>comp_len?comp2_len-comp_len:comp_len-comp2_len), (comp2_len>comp_len?L"worse":L"better"));
+	wprintf(L"compress:         %Iu bytes\tin %f sec (%Iu bytes %s)\n", comp2_len, time, (comp2_len>comp_len?comp2_len-comp_len:comp_len-comp2_len), (comp2_len>comp_len?L"worse":L"better"));
 	write_all(out, comp2, comp2_len);
 	
-	start = clock();
+	timer_reset();
 	uncomp_len = 0;
 	DECOMPRESSION_REPEAT
 	status = RtlDecompressBufferEx(format, uncomp, len*4, comp2, comp2_len, &uncomp_len, ws);
-	end = clock();
+	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
-	wprintf(L"rtl-decompress:   %Iu bytes\tin %u ms [%lX]\n", uncomp_len, end - start, status);
+	wprintf(L"rtl-decompress:   %Iu bytes\tin %f sec [%lX]\n", uncomp_len, time, status);
 
-	start = clock();
+	timer_reset();
 	DECOMPRESSION_REPEAT
 	uncomp_len = decompress(format2, comp2, comp2_len, uncomp, len*4);
-	end = clock();
+	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
-	wprintf(L"decompress:       %Iu bytes\tin %u ms\n", uncomp_len, end - start);
+	wprintf(L"decompress:       %Iu bytes\tin %f sec\n", uncomp_len, time);
 
 	wprintf(L"================================================================\n");
 
@@ -290,8 +293,8 @@ int main()
 	if (!load_rtl_compression()) return -1;
 
 	//if (!run_tests(L"LZNT1",          COMPRESSION_FORMAT_LZNT1,       L"lznt1"      )) return -1;
-	//if (!run_tests(L"XPRESS",         COMPRESSION_FORMAT_XPRESS,      L"xpress"     )) return -1;
-	if (!run_tests(L"XPRESS HUFFMAN", COMPRESSION_FORMAT_XPRESS_HUFF, L"xpress_huff")) return -1;
+	if (!run_tests(L"XPRESS",         COMPRESSION_FORMAT_XPRESS,      L"xpress"     )) return -1;
+	//if (!run_tests(L"XPRESS HUFFMAN", COMPRESSION_FORMAT_XPRESS_HUFF, L"xpress_huff")) return -1;
 
 	//compress_file(COMPRESSION_FORMAT_XPRESS_HUFF, L"win8-bootmgr.exe", L"win8-bootmgr.rtl.xpress_huff", L"win8-bootmgr.xpress_huff", ws);
 

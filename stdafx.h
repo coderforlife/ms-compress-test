@@ -24,4 +24,3 @@
 #include <string.h>
 #include <stdio.h>
 #include <tchar.h>
-#include <time.h>

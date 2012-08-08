@@ -78,6 +78,25 @@ typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
 typedef __nullterminated CONST CHAR *LPCSTR, *PCSTR;
 typedef __nullterminated CONST WCHAR *LPCWSTR, *PCWSTR;
 
+typedef unsigned long DWORD;
+typedef int BOOL;
+typedef __int64 LONGLONG;
+#if defined(MIDL_PASS)
+typedef struct _LARGE_INTEGER {
+#else // MIDL_PASS
+typedef union _LARGE_INTEGER {
+	struct {
+		DWORD LowPart;
+		LONG HighPart;
+	} DUMMYSTRUCTNAME;
+	struct {
+		DWORD LowPart;
+		LONG HighPart;
+	} u;
+#endif //MIDL_PASS
+	LONGLONG QuadPart;
+} LARGE_INTEGER;
+
 #define FAR
 #define WINAPI __stdcall
 
@@ -118,6 +137,8 @@ extern "C" {
 WINBASEAPI __out_opt HMODULE WINAPI LoadLibraryA(__in LPCSTR lpLibFileName);
 WINBASEAPI __out_opt HMODULE WINAPI LoadLibraryW(__in LPCWSTR lpLibFileName);
 WINBASEAPI FARPROC WINAPI GetProcAddress(__in HMODULE hModule, __in LPCSTR lpProcName);
+WINBASEAPI BOOL WINAPI QueryPerformanceCounter(__out LARGE_INTEGER *lpPerformanceCount);
+WINBASEAPI BOOL WINAPI QueryPerformanceFrequency(__out LARGE_INTEGER *lpFrequency);
 #ifdef __cplusplus
 }
 #endif
