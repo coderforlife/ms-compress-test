@@ -18,13 +18,13 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="win-min.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="win-compression.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rtl-compression.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wim.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -33,6 +33,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="wim.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

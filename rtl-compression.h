@@ -4,8 +4,6 @@
 
 #ifdef _WIN32
 
-#include "win-min.h"
-
 ///// Dynamic Function Loading /////
 #define FUNC(r, n, ...) typedef r (__stdcall* FUNC_##n)(__VA_ARGS__); FUNC_##n n = NULL;
 #define LOAD_FUNC(func, hmod) (func = (FUNC_##func)GetProcAddress(hmod, #func))

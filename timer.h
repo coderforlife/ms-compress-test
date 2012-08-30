@@ -6,7 +6,6 @@
 
 #ifdef WIN32
 
-#include "win-min.h"
 static LARGE_INTEGER _timer_start = { 0 };
 static double _timer_fequency = 0;
 static inline void timer_reset() {

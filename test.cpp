@@ -19,7 +19,8 @@
 
 #include "timer.h"
 #include "compression.h"
-#include "win-compression.h"
+#include "rtl-compression.h"
+#include "wim.h"
 
 #include <time.h>
 
@@ -29,10 +30,10 @@
 #define ARRAYSIZE(a) sizeof(a)/sizeof(a[0])
 #endif
 
-#define COMPRESSION_REPEAT		for (i = 0; i < 100; ++i)
-#define DECOMPRESSION_REPEAT	for (i = 0; i < 1000; ++i)
+#define COMPRESSION_REPEAT		for (i = 0; i < 10; ++i)
+#define DECOMPRESSION_REPEAT	//for (i = 0; i < 100; ++i)
 
-static bool write_all(const wchar_t* file, bytes a, size_t len)
+static bool write_all(const wchar_t* file, const_bytes a, size_t len)
 {
 	size_t written;
 	FILE* f = _wfopen(file, L"wb");
@@ -162,7 +163,7 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	COMPRESSION_REPEAT
 	status = RtlCompressBuffer(format | COMPRESSION_ENGINE_STANDARD, orig, len, comp, len*4, 4096, &comp_len, ws);
 	time = timer_get();
-	wprintf(L"rtl-compress-std: %Iu bytes\tin %f sec [%lX]\n", comp_len, time, status);
+	wprintf(L"rtl-compress-std: %Iu bytes\tin %f sec {%.2f%%} [%lX]\n", comp_len, time, comp_len * 100.0 / len, status);
 	write_all(rtl_out, comp, comp_len);
 
 	timer_reset();
@@ -188,7 +189,7 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	COMPRESSION_REPEAT
 	status = RtlCompressBuffer(format | COMPRESSION_ENGINE_MAXIMUM, orig, len, comp, len*4, 4096, &comp_len, ws);
 	time = timer_get();
-	wprintf(L"rtl-compress-max: %Iu bytes\tin %f sec [%lX]\n", comp_len, time, status);
+	wprintf(L"rtl-compress-max: %Iu bytes\tin %f sec {%.2f%%} [%lX]\n", comp_len, time, comp_len * 100.0 / len, status);
 	write_all(rtl_out, comp, comp_len);
 
 	timer_reset();
@@ -214,7 +215,7 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	comp2_len = compress(format2, orig, len, comp2, len*4);
 	time = timer_get();
 	check_equality(comp, comp2, MIN(comp_len, comp2_len));
-	wprintf(L"compress:         %Iu bytes\tin %f sec (%Iu bytes %s)\n", comp2_len, time, (comp2_len>comp_len?comp2_len-comp_len:comp_len-comp2_len), (comp2_len>comp_len?L"worse":L"better"));
+	wprintf(L"compress:         %Iu bytes\tin %f sec {%.2f%%}\n", comp2_len, time, comp2_len * 100.0 / len); //(%Iu bytes %s) ~ (comp2_len>comp_len?comp2_len-comp_len:comp_len-comp2_len), (comp2_len>comp_len?L"worse":L"better"));
 	write_all(out, comp2, comp2_len);
 	
 	timer_reset();
@@ -253,7 +254,7 @@ static bool run_tests(const wchar_t* name, USHORT format, const wchar_t* ext)
 	static const wchar_t* files[] =
 	{
 		L"test.bmp", L"test.dic", L"test.dll", L"test.doc", L"test.exe", 
-		L"test.hlp", L"test.jpg", L"test.log", L"test.pdf", L"test.txt",
+		L"test.hlp", L"test.jpg", L"test.log", L"test.pdf", L"test.orig.txt",
 	};
 	wchar_t out_rtl[128], out[128];
 	void *ws = NULL;
@@ -283,6 +284,11 @@ static bool run_tests(const wchar_t* name, USHORT format, const wchar_t* ext)
 
 int main()
 {
+	//DeleteFile(L"test.xpress_huff.wim");
+	//create_wim(L"test.xpress_huff.wim", L"tests", WIM_COMPRESS_XPRESS);
+	//DeleteFile(L"test.lzx.wim");
+	//create_wim(L"test.lzx.wim", L"tests", WIM_COMPRESS_LZX);
+
 	_wchdir(L"tests");
 
 	//fill_uncompressible(input, sizeof(input));
