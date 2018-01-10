@@ -18,9 +18,8 @@
 #include "stdafx.h"
 
 #include "timer.h"
-#include "compression.h"
+#include "library\include\mscomp.h"
 #include "rtl-compression.h"
-#include "wim.h"
 
 #include <time.h>
 
@@ -30,7 +29,7 @@
 #define ARRAYSIZE(a) sizeof(a)/sizeof(a[0])
 #endif
 
-#define COMPRESSION_REPEAT		for (i = 0; i < 10; ++i)
+#define COMPRESSION_REPEAT		//for (i = 0; i < 10; ++i)
 #define DECOMPRESSION_REPEAT	//for (i = 0; i < 100; ++i)
 
 static bool write_all(const wchar_t* file, const_bytes a, size_t len)
@@ -115,7 +114,7 @@ static bool check_equality(const_bytes a, const_bytes b, size_t len)
 	size_t i;
 	for (i = 0; i < len && a[i] == b[i]; ++i);
 	if (i != len)
-		wprintf(L"Unequal at %p: %02X != %02X\n", i, (unsigned int)a[i], (unsigned int)b[i]);
+		wprintf(L"Unequal at %zu: %02X != %02X\n", i, (unsigned int)a[i], (unsigned int)b[i]);
 	return i == len;
 }
 
@@ -144,13 +143,15 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 {
 	NTSTATUS status = 0;
 	ULONG uncomp_len, comp_len, comp2_len = 0;
+	size_t uncomp_len_t, comp_len_t;
 	bytes uncomp = (bytes)malloc(len*4);
 	bytes comp = (bytes)malloc(len*4);
 	bytes comp2 = (bytes)malloc(len*4);
 	uint_fast16_t i;
 	double time;
 	
-	CompressionFormat format2 = (CompressionFormat)format;
+	MSCompFormat format2 = (MSCompFormat)format;
+	MSCompStatus ms_status;
 	/*switch (format)
 	{
 	case COMPRESSION_FORMAT_LZNT1:		format2 = COMPRESSION_LZNT1; break;
@@ -176,8 +177,10 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	
 	memset(uncomp, 0xFF, len*4);
 	timer_reset();
+	uncomp_len_t = 4*len;
 	DECOMPRESSION_REPEAT
-	uncomp_len = decompress(format2, comp, comp_len, uncomp, len*4);
+	ms_status = ms_decompress(format2, comp, comp_len, uncomp, &uncomp_len_t);
+	if (ms_status != MSCOMP_OK) wprintf(L"decompress failed:0x%x\n", ms_status);
 	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
 	wprintf(L"decompress:       %Iu bytes\tin %f sec\n", uncomp_len, time);
@@ -202,8 +205,11 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	
 	memset(uncomp, 0xFF, len*4);
 	timer_reset();
+	uncomp_len_t = 4 * len;
+
 	DECOMPRESSION_REPEAT
-	uncomp_len = decompress(format2, comp, comp_len, uncomp, len*4);
+	ms_status = ms_decompress(format2, comp, comp_len, uncomp, &uncomp_len_t);
+	if (ms_status != MSCOMP_OK) wprintf(L"decompress failed:0x%x\n", ms_status);
 	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
 	wprintf(L"decompress:       %Iu bytes\tin %f sec\n", uncomp_len, time);
@@ -211,8 +217,10 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	wprintf(L"----------------------------------------------------------------\n");
 
 	timer_reset();
+	comp_len_t = 4 * len;
 	COMPRESSION_REPEAT
-	comp2_len = compress(format2, orig, len, comp2, len*4);
+	ms_status = ms_compress(format2, orig, len, comp2, &comp_len_t);
+	if (ms_status != MSCOMP_OK) wprintf(L"ms_compress failed:0x%x\n", ms_status);
 	time = timer_get();
 	check_equality(comp, comp2, MIN(comp_len, comp2_len));
 	wprintf(L"compress:         %Iu bytes\tin %f sec {%.2f%%}\n", comp2_len, time, comp2_len * 100.0 / len); //(%Iu bytes %s) ~ (comp2_len>comp_len?comp2_len-comp_len:comp_len-comp2_len), (comp2_len>comp_len?L"worse":L"better"));
@@ -227,8 +235,9 @@ static void compress_buf(USHORT format, bytes orig, size_t len, const wchar_t* r
 	wprintf(L"rtl-decompress:   %Iu bytes\tin %f sec [%lX]\n", uncomp_len, time, status);
 
 	timer_reset();
+	uncomp_len_t = 4 * len;
 	DECOMPRESSION_REPEAT
-	uncomp_len = decompress(format2, comp2, comp2_len, uncomp, len*4);
+	uncomp_len = ms_decompress(format2, comp2, comp2_len, uncomp, &uncomp_len_t);
 	time = timer_get();
 	check_equality(orig, uncomp, uncomp_len);
 	wprintf(L"decompress:       %Iu bytes\tin %f sec\n", uncomp_len, time);

@@ -24,18 +24,12 @@
     <ClInclude Include="rtl-compression.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wim.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="wim.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
